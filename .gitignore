@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.m3u
+.json
+.spotify_credentials
+.env
+venv/
+.venv/
+*.egg
+.pytest_cache/
+.mypy_cache/
