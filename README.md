@@ -11,12 +11,16 @@
 ## ✨ Features
 
 - **15 mood profiles** — from `happy` to `zen`, `angry` to `roadtrip`, and even `coding` mode 💻
+- **Mood blending** — combine two moods with `--blend mood1+mood2` for unique playlists 🔮
+- **Surprise mode** — let the tool pick a random mood with `--surprise` 🎲
+- **Config file** — save your credentials and defaults with `--save-config` ⚙️
+- **Playlist history** — revisit your generated playlists with `--history` 📜
 - **Spotify Recommendations API integration** — real tracks, real artists, real vibes
 - **Interactive mode** — guided mood picker if you can't decide what you're feeling
 - **Demo mode** — see how it works without any API keys
 - **Export options** — save playlists as M3U or JSON files
 - **Beautiful CLI output** — colored tables, emojis, and formatted track listings
-- **No bloat** — single Python file, zero config, gets straight to the music
+- **No bloat** — single Python file, gets straight to the music
 
 ## 🚀 Installation
 
@@ -73,6 +77,40 @@ mood-playlist chill --limit 10
 mood-playlist energetic --demo
 ```
 
+### Mood Blending 🔮
+
+```bash
+# Blend two moods for a unique playlist
+mood-playlist --blend chill+romantic
+mood-playlist --blend happy+energetic --limit 15
+mood-playlist --blend sad+coding --export-json
+```
+
+### Surprise Mode 🎲
+
+```bash
+# Let the tool pick a random mood for you
+mood-playlist --surprise
+mood-playlist --surprise --export-m3u --output ~/playlists/
+```
+
+### Config & History ⚙️📜
+
+```bash
+# Save your Spotify credentials as defaults
+mood-playlist --save-config --client-id YOUR_ID --client-secret YOUR_SECRET
+
+# Save defaults for other options
+mood-playlist --save-config --limit 15 --output ~/playlists/
+
+# View your saved config
+mood-playlist --show-config
+
+# View recent playlist history
+mood-playlist --history
+mood-playlist --history --history-limit 20
+```
+
 ### All Options
 
 | Flag | Description | Default |
@@ -82,12 +120,18 @@ mood-playlist energetic --demo
 | `--interactive`, `-i` | Interactive mood picker | — |
 | `--limit N`, `-n N` | Number of tracks | 20 |
 | `--demo` | Demo mode (no API needed) | — |
+| `--blend M1+M2` | Blend two moods together | — |
+| `--surprise` | Random mood selection | — |
 | `--export-m3u` | Export as M3U playlist file | — |
 | `--export-json` | Export as JSON file | — |
 | `--no-links` | Hide Spotify links in output | — |
 | `--output DIR`, `-o DIR` | Export directory | `.` |
-| `--client-id ID` | Spotify Client ID | env var |
-| `--client-secret SECRET` | Spotify Client Secret | env var |
+| `--client-id ID` | Spotify Client ID | env var / config |
+| `--client-secret SECRET` | Spotify Client Secret | env var / config |
+| `--save-config` | Save current settings as defaults | — |
+| `--show-config` | Display saved config | — |
+| `--history` | Show playlist history | — |
+| `--history-limit N` | History entries to show | 10 |
 | `--version`, `-v` | Show version | — |
 
 ### Export Playlists
@@ -134,10 +178,14 @@ This launches a guided prompt where you pick your mood and get an instant playli
 ## 💡 Pro Tips
 
 - **Combine with Spotify URI**: Copy the track URLs from the output and open them directly in the Spotify app
+- **Save credentials once**: Use `--save-config` to store your Spotify keys — no more typing them every time!
+- **Discover new combos**: Try mood blends like `energetic+coding` for a hyper-focus playlist, or `angry+zen` for... interesting contrast 😅
+- **Surprise yourself**: Can't decide? `--surprise` picks a mood and might introduce you to your next favorite vibe
 - **Shell aliases**: Add to your `.bashrc` or `.zshrc` for quick access:
   ```bash
   alias vibes="mood-playlist --interactive"
   alias jams="mood-playlist energetic --export-json -o ~/playlists/"
+  alias mood="mood-playlist --surprise"
   ```
 - **Script it**: Pipe the JSON export into your own tools:
   ```bash

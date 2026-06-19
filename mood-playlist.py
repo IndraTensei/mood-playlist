@@ -9,8 +9,10 @@ A fun universal CLI tool — tell it how you're feeling, get songs!
 import argparse
 import json
 import os
+import random
 import sys
 import textwrap
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -18,6 +20,12 @@ try:
 except ImportError:
     print("❌ Error: 'requests' package required. Install with: pip install requests")
     sys.exit(1)
+
+# ─── Config paths ─────────────────────────────────────────────────────────────
+
+CONFIG_DIR = Path.home() / ".config" / "mood-playlist"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+HISTORY_FILE = CONFIG_DIR / "history.json"
 
 # ─── Mood-to-genre/tag mapping ────────────────────────────────────────────────
 
@@ -132,12 +140,12 @@ MOOD_PROFILES = {
 
 # ASCII art banner
 BANNER = r"""
-  __  __                 _  ____  _             _ _       
- |  \/  | ___   ___   __| ||  _ \| | __ _ _   _| (_) ___  
- | |\/| |/ _ \ / _ \ / _` || |_) | |/ _` | | | | | |/ _ \ 
+  __  __                 _  ____  _             _ _
+ |  \/  | ___   ___   __| ||  _ \| | __ _ _   _| (_) ___ 
+ | |\/| |/ _ \ / _ \ / _` || |_) | |/ _` | | | | | |/ _ \
  | |  | | (_) | (_) | (_| ||  __/| | (_| | |_| | | | (_) |
- |_|  |_|\___/ \___/ \__,_||_|   |_|\__,_|\__, |_|_|\___/ 
-                                           |___/           
+ |_|  |_|\___/ \___/ \__,_||_|   |_|\__,_|\__, |_|_|\___/
+                                           |___/
 🎵  Mood-based playlist generator  🎵
 """
 
@@ -166,6 +174,118 @@ def list_moods():
         print(f"  {emoji}  {colorize(key.ljust(12), 'yellow')} — {colorize(name, 'green')}  {colorize(f'({desc})', 'white')}")
     print()
 
+
+# ─── Config management ────────────────────────────────────────────────────────
+
+def load_config() -> dict:
+    """Load config from ~/.config/mood-playlist/config.json."""
+    if not CONFIG_FILE.exists():
+        return {}
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return {}
+
+
+def save_config(config: dict):
+    """Save config to ~/.config/mood-playlist/config.json."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+    print(colorize(f"  ⚙️  Config saved to: {CONFIG_FILE}", "green"))
+
+
+def save_history(entry: dict):
+    """Append a playlist generation entry to history."""
+    history = load_history()
+    history.append(entry)
+    # Keep last 100 entries
+    history = history[-100:]
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
+
+
+def load_history() -> list:
+    """Load playlist history."""
+    if not HISTORY_FILE.exists():
+        return []
+    try:
+        with open(HISTORY_FILE, "r") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return []
+
+
+def show_history(limit: int = 10):
+    """Display recent playlist history."""
+    history = load_history()
+    if not history:
+        print(colorize("\n  📭  No history yet. Generate some playlists first!\n", "yellow"))
+        return
+
+    print(colorize(f"\n📜  Recent Playlist History (last {min(limit, len(history))}):\n", "bold"))
+    for entry in history[-limit:]:
+        ts = entry.get("timestamp", "unknown")
+        mood = entry.get("mood", "unknown")
+        track_count = entry.get("track_count", 0)
+        emoji = entry.get("emoji", "🎵")
+        blended = entry.get("blended_from", None)
+        blend_str = f" (blended: {' + '.join(blended)})" if blended else ""
+        print(f"  {emoji}  {colorize(mood.ljust(14), 'yellow')}{blend_str} — {track_count} tracks — {ts}")
+    print()
+
+
+def cmd_config(args):
+    """Handle --save-config / --show-config / --history commands."""
+    if args.save_config:
+        config = {}
+        if args.client_id:
+            config["client_id"] = args.client_id
+        if args.client_secret:
+            config["client_secret"] = args.client_secret
+        if args.limit:
+            config["default_limit"] = args.limit
+        if args.output:
+            config["default_output"] = args.output
+        save_config(config)
+        return True
+    elif args.show_config:
+        config = load_config()
+        if not config:
+            print(colorize("\n  ⚙️  No config saved yet. Use --save-config to save defaults.\n", "yellow"))
+        else:
+            print(colorize("\n  ⚙️  Current Config:\n", "bold"))
+            for k, v in config.items():
+                # Mask secrets
+                display_v = v if "secret" not in k else v[:4] + "..." + v[-4:]
+                print(f"     {k}: {display_v}")
+            print()
+        return True
+    elif args.history:
+        show_history(args.history_limit)
+        return True
+    return False
+
+
+# ─── Mood blending ─────────────────────────────────────────────────────────────
+
+def blend_moods(mood1: str, mood2: str) -> dict:
+    """Blend two mood profiles into one."""
+    p1 = MOOD_PROFILES[mood1]
+    p2 = MOOD_PROFILES[mood2]
+    return {
+        "display_name": f"{p1[0]} × {p2[0]}",
+        "genres": list(set(p1[1] + p2[1])),  # merge genres, dedupe
+        "energy": round((p1[2] + p2[2]) / 2, 2),
+        "valence": round((p1[3] + p2[3]) / 2, 2),
+        "description": f"A unique mix of {p1[0].lower()} and {p2[0].lower()}",
+        "emoji": f"{p1[5]}{p2[5]}",
+    }
+
+
+# ─── Spotify API ───────────────────────────────────────────────────────────────
 
 def get_spotify_token(client_id: str, client_secret: str) -> str:
     """Authenticate with Spotify using Client Credentials flow."""
@@ -215,13 +335,14 @@ def search_tracks(genres: list, energy: float, valence: float, token: str, limit
     return all_tracks[:limit]
 
 
-def display_playlist(tracks: list, mood: str, mood_name: str, emoji: str):
+def display_playlist(tracks: list, mood: str, mood_name: str, emoji: str, blended_from: list | None = None):
     """Display the playlist in a nice formatted table."""
     if not tracks:
         print(colorize("\n😔  No tracks found. Try a different mood or check your connection.", "yellow"))
         return
 
-    print(colorize(f"\n{emoji}  Your {mood_name} Playlist:", "bold"))
+    blend_str = f" (blended: {' + '.join(blended_from)})" if blended_from else ""
+    print(colorize(f"\n{emoji}  Your {mood_name} Playlist{blend_str}:", "bold"))
     print(colorize(f"   {len(tracks)} tracks based on mood '{mood}'\n", "cyan"))
     print(colorize(f"  {'#':<4} {'Track':<45} {'Artist':<30} {'Album':<30}", "bold"))
     print(colorize("  " + "─" * 109, "white"))
@@ -320,12 +441,43 @@ def interactive_mode(args):
 def run_playlist_generation(args):
     """Core playlist generation logic."""
     mood = args.mood.lower()
-    if mood not in MOOD_PROFILES:
+    blended_from = None
+
+    # Handle surprise mode
+    if args.surprise:
+        mood = random.choice(list(MOOD_PROFILES.keys()))
+        print(colorize(f"\n  🎲  Surprise! You got... {colorize(mood.upper(), 'magenta')}!", "bold"))
+
+    # Handle mood blending
+    blended_from = None
+    profile = None
+    if args.blend:
+        parts = args.blend.lower().split("+")
+        if len(parts) != 2:
+            print(colorize("  ⚠️  Blend format: --blend mood1+mood2 (e.g., --blend chill+romantic)", "yellow"))
+            sys.exit(1)
+        mood1, mood2 = parts[0].strip(), parts[1].strip()
+        if mood1 not in MOOD_PROFILES:
+            print(colorize(f"  ⚠️  Unknown mood '{mood1}'.", "yellow"))
+            list_moods()
+            sys.exit(1)
+        if mood2 not in MOOD_PROFILES:
+            print(colorize(f"  ⚠️  Unknown mood '{mood2}'.", "yellow"))
+            list_moods()
+            sys.exit(1)
+
+        profile = blend_moods(mood1, mood2)
+        blended_from = [mood1, mood2]
+        mood = f"{mood1}+{mood2}"
+        print(colorize(f"\n  🔮  Blending {mood1} {MOOD_PROFILES[mood1][5]} + {mood2} {MOOD_PROFILES[mood2][5]} = something magical!", "bold"))
+    elif mood not in MOOD_PROFILES:
         print(colorize(f"  ⚠️  Unknown mood '{mood}'. Here are available moods:", "yellow"))
         list_moods()
         sys.exit(1)
 
-    profile = MOOD_PROFILES[mood]
+    if profile is None:
+        profile = MOOD_PROFILES[mood]
+
     mood_name = profile[0]
     genres = profile[1]
     energy = profile[2]
@@ -336,14 +488,16 @@ def run_playlist_generation(args):
     print(colorize(f"\n  {emoji}  Generating your {mood_name} playlist...", "bold"))
     print(colorize(f"     {desc}", "white"))
 
-    # Get Spotify credentials
-    client_id = args.client_id or os.environ.get("SPOTIFY_CLIENT_ID", "")
-    client_secret = args.client_secret or os.environ.get("SPOTIFY_CLIENT_SECRET", "")
+    # Get Spotify credentials (config file > env vars > args)
+    config = load_config()
+    client_id = args.client_id or config.get("client_id") or os.environ.get("SPOTIFY_CLIENT_ID", "")
+    client_secret = args.client_secret or config.get("client_secret") or os.environ.get("SPOTIFY_CLIENT_SECRET", "")
 
     if not client_id or not client_secret:
         print(colorize("\n  ⚠️  No Spotify credentials provided.", "yellow"))
         print("  You can still use the tool in demo mode with --demo flag,")
         print(f"  or set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.")
+        print("  Or save them with: mood-playlist --save-config --client-id ID --client-secret SECRET")
         print("\n  📝  To get credentials:")
         print("     1. Go to https://developer.spotify.com/dashboard")
         print("     2. Create an app (set redirect URI to http://localhost:8888/callback)")
@@ -360,7 +514,7 @@ def run_playlist_generation(args):
         sys.exit(1)
 
     # Display
-    display_playlist(tracks, mood, mood_name, emoji)
+    display_playlist(tracks, mood, mood_name, emoji, blended_from)
 
     # Export options
     if args.export_m3u:
@@ -370,19 +524,55 @@ def run_playlist_generation(args):
     if not args.no_links:
         save_to_spotify(tracks, mood, token)
 
+    # Save to history
+    save_history({
+        "mood": mood,
+        "emoji": emoji,
+        "track_count": len(tracks),
+        "blended_from": blended_from or [],
+        "timestamp": datetime.now().isoformat(),
+    })
+
     return tracks
 
 
 def demo_mode(args):
     """Run in demo mode without Spotify API — show what the tool would do."""
-    mood = args.mood.lower()
-    if mood not in MOOD_PROFILES:
-        print(colorize(f"  ⚠️  Unknown mood '{mood}'. Here are available moods:", "yellow"))
-        list_moods()
-        sys.exit(1)
+    mood = args.mood.lower() if args.mood else ""
+    blended_from = None
 
-    profile = MOOD_PROFILES[mood]
-    mood_name, genres, energy, valence, desc, emoji = profile
+    # Handle surprise
+    if args.surprise and not mood:
+        mood = random.choice(list(MOOD_PROFILES.keys()))
+        print(colorize(f"\n  🎲  Surprise! You got... {colorize(mood.upper(), 'magenta')}!", "bold"))
+
+    # Handle blend
+    if args.blend:
+        parts = args.blend.lower().split("+")
+        if len(parts) == 2:
+            mood1, mood2 = parts[0].strip(), parts[1].strip()
+            if mood1 in MOOD_PROFILES and mood2 in MOOD_PROFILES:
+                profile = blend_moods(mood1, mood2)
+                blended_from = [mood1, mood2]
+                mood = f"{mood1}+{mood2}"
+                print(colorize(f"\n  🔮  Blending {mood1} {MOOD_PROFILES[mood1][5]} + {mood2} {MOOD_PROFILES[mood2][5]} = something magical!", "bold"))
+
+    if not mood or mood not in MOOD_PROFILES:
+        if not blended_from:
+            print(colorize(f"  ⚠️  Unknown mood '{mood}'. Here are available moods:", "yellow"))
+            list_moods()
+            sys.exit(1)
+
+    if blended_from and profile:
+        mood_name = profile["display_name"]
+        genres = profile["genres"]
+        energy = profile["energy"]
+        valence = profile["valence"]
+        desc = profile["description"]
+        emoji = profile["emoji"]
+    else:
+        profile = MOOD_PROFILES[mood]
+        mood_name, genres, energy, valence, desc, emoji = profile
 
     print(colorize(f"\n  {emoji}  DEMO MODE — {mood_name} Playlist", "bold"))
     print(colorize(f"     {desc}\n", "white"))
@@ -594,31 +784,52 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             examples:
-              mood-playlist happy                         # Generate happy playlist
-              mood-playlist sad --limit 10                 # 10 sad tracks
-              mood-playlist focused --export-json          # Export as JSON file
+              mood-playlist happy                           # Generate happy playlist
+              mood-playlist sad --limit 10                   # 10 sad tracks
+              mood-playlist focused --export-json            # Export as JSON file
               mood-playlist happy --export-m3u --output ./playlists
-              mood-playlist --list                         # Show all moods
-              mood-playlist --interactive                  # Interactive mode
-              mood-playlist happy --demo                   # Demo mode (no API needed)
+              mood-playlist --list                           # Show all moods
+              mood-playlist --interactive                    # Interactive mode
+              mood-playlist happy --demo                     # Demo mode (no API needed)
+              mood-playlist --blend chill+romantic           # Blend two moods!
+              mood-playlist --surprise                       # Random mood!
+              mood-playlist --save-config --client-id ID --client-secret SECRET
+              mood-playlist --history                        # View playlist history
         """),
     )
     parser.add_argument("mood", nargs="?", help="Your current mood (e.g., happy, sad, chill)")
     parser.add_argument("--list", "-l", action="store_true", help="List all available moods")
     parser.add_argument("--interactive", "-i", action="store_true", help="Interactive mood picker")
-    parser.add_argument("--limit", "-n", type=int, default=20, help="Number of tracks (default: 20)")
+    parser.add_argument("--limit", "-n", type=int, default=None, help="Number of tracks (default: 20)")
     parser.add_argument("--client-id", help="Spotify Client ID (or set SPOTIFY_CLIENT_ID)")
     parser.add_argument("--client-secret", help="Spotify Client Secret (or set SPOTIFY_CLIENT_SECRET)")
     parser.add_argument("--export-m3u", action="store_true", help="Export playlist as M3U file")
     parser.add_argument("--export-json", action="store_true", help="Export playlist as JSON file")
     parser.add_argument("--no-links", action="store_true", help="Don't show Spotify links")
     parser.add_argument(
-        "--output", "-o", default=".", help="Output directory for exports (default: current dir)"
+        "--output", "-o", default=None, help="Output directory for exports (default: current dir)"
     )
     parser.add_argument("--demo", action="store_true", help="Demo mode — no Spotify API needed")
-    parser.add_argument("--version", "-v", action="version", version="mood-playlist 1.0.0")
+    parser.add_argument("--blend", type=str, metavar="MOOD1+MOOD2", help="Blend two moods (e.g., chill+romantic)")
+    parser.add_argument("--surprise", action="store_true", help="Surprise me with a random mood!")
+    parser.add_argument("--save-config", action="store_true", help="Save current args as default config")
+    parser.add_argument("--show-config", action="store_true", help="Show current saved config")
+    parser.add_argument("--history", action="store_true", help="Show playlist history")
+    parser.add_argument("--history-limit", type=int, default=10, help="Number of history entries to show")
+    parser.add_argument("--version", "-v", action="version", version="mood-playlist 1.1.0")
 
     args = parser.parse_args()
+
+    # Apply config defaults if not specified
+    config = load_config()
+    if args.limit is None:
+        args.limit = config.get("default_limit", 20)
+    if args.output is None:
+        args.output = config.get("default_output", ".")
+
+    # Handle config/history commands
+    if cmd_config(args):
+        return
 
     # List moods mode
     if args.list:
@@ -631,18 +842,23 @@ def main():
         interactive_mode(args)
         return
 
-    # No mood provided — show help
-    if not args.mood:
+    # No mood provided (and not surprise/blend) — show help
+    if not args.mood and not args.surprise and not args.blend:
         print_banner()
         list_moods()
         print(colorize("  👉  Run: mood-playlist <mood> to generate a playlist", "cyan"))
         print(colorize("  👉  Run: mood-playlist --interactive for interactive mode", "cyan"))
+        print(colorize("  👉  Run: mood-playlist --surprise for a random mood", "cyan"))
+        print(colorize("  👉  Run: mood-playlist --blend mood1+mood2 to blend moods", "cyan"))
         print(colorize("  👉  Run: mood-playlist --help for all options\n", "cyan"))
         return
 
     # Demo mode
     if args.demo:
         print_banner()
+        if args.surprise and not args.mood:
+            args.mood = random.choice(list(MOOD_PROFILES.keys()))
+            print(colorize(f"\n  🎲  Surprise! You got... {colorize(args.mood.upper(), 'magenta')}!", "bold"))
         demo_mode(args)
         return
 
