@@ -1,4 +1,4 @@
-# mood-playlist 🎵
+# mood-playlist 
 
 > *Tell it how you're feeling. It'll find the perfect tunes.*
 
@@ -8,13 +8,13 @@
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 ![Spotify](https://img.shields.io/badge/Spotify-API-1DB954?style=flat-square&logo=spotify)
 
-## ✨ Features
+##  Features
 
-- **15 mood profiles** — from `happy` to `zen`, `angry` to `roadtrip`, and even `coding` mode 💻
-- **Mood blending** — combine two moods with `--blend mood1+mood2` for unique playlists 🔮
-- **Surprise mode** — let the tool pick a random mood with `--surprise` 🎲
-- **Config file** — save your credentials and defaults with `--save-config` ⚙️
-- **Playlist history** — revisit your generated playlists with `--history` 📜
+- **18 mood profiles** — from `happy` to `heartbreak`, `morning` to `travel`, and even `coding` mode
+- **Mood blending** — combine two moods with `--blend mood1+mood2` for unique playlists 
+- **Surprise mode** — let the tool pick a random mood with `--surprise` 
+- **Config file** — save your credentials and defaults with `--save-config` 
+- **Playlist history** — revisit your generated playlists with `--history` 
 - **Spotify Recommendations API integration** — real tracks, real artists, real vibes
 - **Interactive mode** — guided mood picker if you can't decide what you're feeling
 - **Demo mode** — see how it works without any API keys
@@ -22,7 +22,7 @@
 - **Beautiful CLI output** — colored tables, emojis, and formatted track listings
 - **No bloat** — single Python file, gets straight to the music
 
-## 🚀 Installation
+##  Installation
 
 ### From source (recommended)
 
@@ -46,7 +46,7 @@ sudo ln -s "$(pwd)/mood-playlist.py" /usr/local/bin/mood-playlist
 - `requests` library (`pip install requests`)
 - A [Spotify Developer](https://developer.spotify.com/dashboard) account (free)
 
-## 🔑 Spotify Setup (one-time, 2 minutes)
+##  Spotify Setup (one-time, 2 minutes)
 
 1. Go to [https://developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
 2. Create an app (any name works; set Redirect URI to `http://localhost:8888/callback`)
@@ -62,7 +62,7 @@ export SPOTIFY_CLIENT_SECRET="your-client-secret-here"
 mood-playlist happy --client-id YOUR_ID --client-secret YOUR_SECRET
 ```
 
-## 🎮 Usage
+##  Usage
 
 ### Quick Start
 
@@ -77,7 +77,7 @@ mood-playlist chill --limit 10
 mood-playlist energetic --demo
 ```
 
-### Mood Blending 🔮
+### Mood Blending 
 
 ```bash
 # Blend two moods for a unique playlist
@@ -86,7 +86,7 @@ mood-playlist --blend happy+energetic --limit 15
 mood-playlist --blend sad+coding --export-json
 ```
 
-### Surprise Mode 🎲
+### Surprise Mode 
 
 ```bash
 # Let the tool pick a random mood for you
@@ -94,7 +94,7 @@ mood-playlist --surprise
 mood-playlist --surprise --export-m3u --output ~/playlists/
 ```
 
-### Config & History ⚙️📜
+### Config & History 
 
 ```bash
 # Save your Spotify credentials as defaults
@@ -155,31 +155,34 @@ mood-playlist --interactive
 
 This launches a guided prompt where you pick your mood and get an instant playlist. Great for when you're not sure what you're feeling!
 
-## 🎭 Available Moods
+##  Available Moods
 
 | Mood | Description | Energy | Vibe |
 |------|-------------|--------|------|
-| `happy` | 😄 Feel-good upbeat pop | HIGH | Positive |
-| `sad` | 😢 Melancholic acoustic | LOW | Reflective |
-| `chill` | 🌊 Lo-fi relaxation | LOW | Calm |
-| `focused` | 🎯 Deep work instrumentals | MID | Neutral |
-| `energetic` | ⚡ Workout bangers | HIGH | Hype |
-| `romantic` | 💕 Smooth love songs | MID | Warm |
-| `angry` | 🔥 Heavy metal & punk | HIGH | Intense |
-| `nostalgic` | 🕰️ Classic hits & retro | MID | Nostalgic |
-| `party` | 🎉 Dance floor anthems | HIGH | Euphoric |
-| `sleepy` | 🌙 Wind-down ambient | LOW | Peaceful |
-| `rainy` | 🌧️ Cozy rainy day folk | MID | Melancholy |
-| `roadtrip` | 🚗 Adventure & country rock | HIGH | Free |
-| `coding` | 💻 Electronic & chiptune | MID | Focused |
-| `hype` | 🔊 Bass-heavy hip-hop | HIGH | Aggressive |
-| `zen` | 🧘 Meditation & ambient | LOW | Peaceful |
+| `happy` |  Feel-good upbeat pop | HIGH | Positive |
+| `sad` |  Melancholic acoustic | LOW | Reflective |
+| `chill` |  Lo-fi relaxation | LOW | Calm |
+| `focused` |  Deep work instrumentals | MID | Neutral |
+| `energetic` |  Workout bangers | HIGH | Hype |
+| `romantic` |  Smooth love songs | MID | Warm |
+| `angry` |  Heavy metal & punk | HIGH | Intense |
+| `nostalgic` |  Classic hits & retro | MID | Nostalgic |
+| `party` |  Dance floor anthems | HIGH | Euphoric |
+| `sleepy` |  Wind-down ambient | LOW | Peaceful |
+| `rainy` |  Cozy rainy day folk | MID | Melancholy |
+| `roadtrip` |  Adventure & country rock | HIGH | Free |
+| `coding` |  Electronic & chiptune | MID | Focused |
+| `hype` |  Bass-heavy hip-hop | HIGH | Aggressive |
+| `zen` | Meditation & ambient | LOW | Peaceful |
+| `morning` | Gentle tracks to start your day | MID | Positive |
+| `travel` | Commute-friendly tracks | MID | Free |
+| `heartbreak` | Healing and moving on | MID | Reflective |
 
-## 💡 Pro Tips
+##  Pro Tips
 
 - **Combine with Spotify URI**: Copy the track URLs from the output and open them directly in the Spotify app
 - **Save credentials once**: Use `--save-config` to store your Spotify keys — no more typing them every time!
-- **Discover new combos**: Try mood blends like `energetic+coding` for a hyper-focus playlist, or `angry+zen` for... interesting contrast 😅
+- **Discover new combos**: Try mood blends like `energetic+coding` for a hyper-focus playlist, or `angry+zen` for... interesting contrast 
 - **Surprise yourself**: Can't decide? `--surprise` picks a mood and might introduce you to your next favorite vibe
 - **Shell aliases**: Add to your `.bashrc` or `.zshrc` for quick access:
   ```bash
@@ -209,10 +212,10 @@ Contributions are welcome! Here's how:
 - Support for creating actual Spotify playlists via OAuth (write access)
 - Playlist history / favorites
 
-## 📜 License
+##  License
 
-[MIT](https://opensource.org/licenses/MIT) — use it, remix it, share it. Just have fun. 🎶
+[MIT](https://opensource.org/licenses/MIT) — use it, remix it, share it. Just have fun. 
 
 ---
 
-Made with 🎵 and `requests` by indie developers who believe every mood deserves a soundtrack.
+Made with  and `requests` by indie developers who believe every mood deserves a soundtrack.

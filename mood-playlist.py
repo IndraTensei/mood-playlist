@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-mood-playlist 🎵
+mood-playlist 
 Generate curated Spotify playlists based on your mood.
 
 A fun universal CLI tool — tell it how you're feeling, get songs!
@@ -18,123 +18,133 @@ from pathlib import Path
 try:
     import requests
 except ImportError:
-    print("❌ Error: 'requests' package required. Install with: pip install requests")
+    print("Error: 'requests' package required. Install with: pip install requests")
     sys.exit(1)
 
-# ─── Config paths ─────────────────────────────────────────────────────────────
+#  Config paths 
 
 CONFIG_DIR = Path.home() / ".config" / "mood-playlist"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 HISTORY_FILE = CONFIG_DIR / "history.json"
 
-# ─── Mood-to-genre/tag mapping ────────────────────────────────────────────────
+#  Mood-to-genre/tag mapping 
 
 MOOD_PROFILES = {
-    # mood: (display_name, genres, energy, valence, description, emoji)
+    # mood: (display_name, genres, energy, valence, description)
     "happy": (
         "Happy / Feel-Good",
         ["happy", "pop", "feel-good", "sunshine", "dance"],
         0.7, 0.9,
-        "Upbeat tracks to keep that smile going 😄",
-        "😄",
+        "Upbeat tracks to keep that smile going",
     ),
     "sad": (
         "Sad / Melancholy",
         ["sad", "acoustic", "indie", "ambient", "piano"],
         0.3, 0.2,
-        "Songs for when you need to feel your feelings 💧",
-        "😢",
+        "Songs for when you need to feel your feelings",
     ),
     "chill": (
         "Chill / Relaxed",
         ["chill", "lo-fi", "ambient", "acoustic", "sleep"],
         0.3, 0.6,
-        "Mellow vibes for unwinding 🌊",
-        "🌊",
+        "Mellow vibes for unwinding",
     ),
     "focused": (
         "Focus / Deep Work",
         ["study", "classical", "piano", "ambient", "instrumental"],
         0.4, 0.5,
-        "Concentration-boosting instrumentals 🧠",
-        "🎯",
+        "Concentration-boosting instrumentals",
     ),
     "energetic": (
         "Energetic / Hype",
         ["workout", "edm", "rock", "hard-rock", "drum-and-bass"],
         0.9, 0.8,
-        "High-octane tracks to power through ⚡",
-        "⚡",
+        "High-octane tracks to power through",
     ),
     "romantic": (
         "Romantic / Love Songs",
         ["romance", "r-n-b", "soul", "jazz", "love-songs"],
         0.5, 0.7,
-        "Smooth grooves for date night 🕯️",
-        "💕",
+        "Smooth grooves for date night",
     ),
     "angry": (
         "Angry / Rage",
         ["metal", "hard-rock", "punk", "grindcore", "industrial"],
         0.95, 0.3,
-        "Let it out with heavy riffs 🔥",
-        "🔥",
+        "Let it out with heavy riffs",
     ),
     "nostalgic": (
         "Nostalgic / Throwback",
         ["oldies", "80s", "90s", "classic-rock", "retro"],
         0.6, 0.6,
-        "Transport yourself back in time 🕰️",
-        "🕰️",
+        "Transport yourself back in time ",
+        "",
     ),
     "party": (
         "Party / Dance",
         ["party", "dance", "pop", "disco", "electronic"],
         0.85, 0.85,
-        "Turn any room into a dance floor 🎉",
-        "🎉",
+        "Turn any room into a dance floor ",
+        "",
     ),
     "sleepy": (
         "Sleepy / Wind Down",
         ["sleep", "ambient", "new-age", "meditation", "chill"],
         0.15, 0.4,
-        "Drift off peacefully 🌙",
-        "🌙",
+        "Drift off peacefully ",
+        "",
     ),
     "rainy": (
         "Rainy Day",
         ["rainy-day", "acoustic", "folk", "indie", "singer-songwriter"],
         0.4, 0.45,
-        "Perfect soundtrack for a cozy rainy afternoon 🌧️",
-        "🌧️",
+        "Perfect soundtrack for a cozy rainy afternoon ",
+        "",
     ),
     "roadtrip": (
         "Road Trip / Adventure",
         ["road-trip", "country", "rock", "indie", "folk"],
         0.7, 0.75,
-        "Windows down, music up 🚗",
-        "🚗",
+        "Windows down, music up ",
+        "",
     ),
     "coding": (
         "Coding / Developer",
         ["electronic", "chiptune", "ambient", "idm", "post-rock"],
         0.5, 0.55,
-        "Beats to ship features to 💻",
-        "💻",
+        "Beats to ship features to ",
+        "",
     ),
     "hype": (
         "Hype / Pump Up",
         ["hip-hop", "trap", "workout", "drill", "bass-line"],
         0.85, 0.75,
-        "Get amped up with bass-heavy bangers 🔊",
-        "🔊",
+        "Get amped up with bass-heavy bangers ",
+        "",
     ),
     "zen": (
         "Zen / Meditation",
         ["meditation", "ambient", "new-age", "classical", "world-music"],
         0.2, 0.5,
-        "Inner peace through sound 🧘",
-        "🧘",
+        "Inner peace through sound",
+    ),
+    "morning": (
+        "Morning / Wake Up",
+        ["morning", "acoustic", "pop", "indie", "coffee-shop"],
+        0.5, 0.7,
+        "Gentle tracks to start your day right",
+    ),
+    "travel": (
+        "Travel / Commute",
+        ["commute", "indie", "pop", "folk", "road-trip"],
+        0.6, 0.7,
+        "Tracks to make your commute fly by",
+    ),
+    "heartbreak": (
+        "Heartbreak / Moving On",
+        ["heartbreak", "acoustic", "soul", "indie", "breakup"],
+        0.4, 0.3,
+        "Songs for healing and moving forward",
     ),
 }
 
@@ -146,7 +156,7 @@ BANNER = r"""
  | |  | | (_) | (_) | (_| ||  __/| | (_| | |_| | | | (_) |
  |_|  |_|\___/ \___/ \__,_||_|   |_|\__,_|\__, |_|_|\___/
                                            |___/
-🎵  Mood-based playlist generator  🎵
+  Mood-based playlist generator
 """
 
 
@@ -169,13 +179,13 @@ def print_banner():
 
 def list_moods():
     """Print all available moods in a nice table."""
-    print(colorize("\n🎭  Available Moods:\n", "bold"))
+    print(colorize("\n  Available Moods:\n", "bold"))
     for key, (name, _, _, _, desc, emoji) in MOOD_PROFILES.items():
         print(f"  {emoji}  {colorize(key.ljust(12), 'yellow')} — {colorize(name, 'green')}  {colorize(f'({desc})', 'white')}")
     print()
 
 
-# ─── Config management ────────────────────────────────────────────────────────
+#  Config management 
 
 def load_config() -> dict:
     """Load config from ~/.config/mood-playlist/config.json."""
@@ -193,7 +203,7 @@ def save_config(config: dict):
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
-    print(colorize(f"  ⚙️  Config saved to: {CONFIG_FILE}", "green"))
+    print(colorize(f"    Config saved to: {CONFIG_FILE}", "green"))
 
 
 def save_history(entry: dict):
@@ -222,15 +232,15 @@ def show_history(limit: int = 10):
     """Display recent playlist history."""
     history = load_history()
     if not history:
-        print(colorize("\n  📭  No history yet. Generate some playlists first!\n", "yellow"))
+        print(colorize("\n    No history yet. Generate some playlists first!\n", "yellow"))
         return
 
-    print(colorize(f"\n📜  Recent Playlist History (last {min(limit, len(history))}):\n", "bold"))
+    print(colorize(f"\n  Recent Playlist History (last {min(limit, len(history))}):\n", "bold"))
     for entry in history[-limit:]:
         ts = entry.get("timestamp", "unknown")
         mood = entry.get("mood", "unknown")
         track_count = entry.get("track_count", 0)
-        emoji = entry.get("emoji", "🎵")
+        emoji = entry.get("emoji", "")
         blended = entry.get("blended_from", None)
         blend_str = f" (blended: {' + '.join(blended)})" if blended else ""
         print(f"  {emoji}  {colorize(mood.ljust(14), 'yellow')}{blend_str} — {track_count} tracks — {ts}")
@@ -254,9 +264,9 @@ def cmd_config(args):
     elif args.show_config:
         config = load_config()
         if not config:
-            print(colorize("\n  ⚙️  No config saved yet. Use --save-config to save defaults.\n", "yellow"))
+            print(colorize("\n    No config saved yet. Use --save-config to save defaults.\n", "yellow"))
         else:
-            print(colorize("\n  ⚙️  Current Config:\n", "bold"))
+            print(colorize("\n    Current Config:\n", "bold"))
             for k, v in config.items():
                 # Mask secrets
                 display_v = v if "secret" not in k else v[:4] + "..." + v[-4:]
@@ -269,7 +279,7 @@ def cmd_config(args):
     return False
 
 
-# ─── Mood blending ─────────────────────────────────────────────────────────────
+#  Mood blending 
 
 def blend_moods(mood1: str, mood2: str) -> dict:
     """Blend two mood profiles into one."""
@@ -285,7 +295,7 @@ def blend_moods(mood1: str, mood2: str) -> dict:
     }
 
 
-# ─── Spotify API ───────────────────────────────────────────────────────────────
+#  Spotify API 
 
 def get_spotify_token(client_id: str, client_secret: str) -> str:
     """Authenticate with Spotify using Client Credentials flow."""
@@ -299,7 +309,7 @@ def get_spotify_token(client_id: str, client_secret: str) -> str:
         resp.raise_for_status()
         return resp.json()["access_token"]
     except requests.exceptions.RequestException as e:
-        print(colorize(f"\n❌ Spotify authentication failed: {e}", "red"))
+        print(colorize(f"\n Spotify authentication failed: {e}", "red"))
         print("  Make sure your Client ID and Secret are correct.")
         sys.exit(1)
 
@@ -338,14 +348,14 @@ def search_tracks(genres: list, energy: float, valence: float, token: str, limit
 def display_playlist(tracks: list, mood: str, mood_name: str, emoji: str, blended_from: list | None = None):
     """Display the playlist in a nice formatted table."""
     if not tracks:
-        print(colorize("\n😔  No tracks found. Try a different mood or check your connection.", "yellow"))
+        print(colorize("\n  No tracks found. Try a different mood or check your connection.", "yellow"))
         return
 
     blend_str = f" (blended: {' + '.join(blended_from)})" if blended_from else ""
     print(colorize(f"\n{emoji}  Your {mood_name} Playlist{blend_str}:", "bold"))
     print(colorize(f"   {len(tracks)} tracks based on mood '{mood}'\n", "cyan"))
     print(colorize(f"  {'#':<4} {'Track':<45} {'Artist':<30} {'Album':<30}", "bold"))
-    print(colorize("  " + "─" * 109, "white"))
+    print(colorize("  " + "" * 109, "white"))
 
     for i, track in enumerate(tracks, 1):
         name = track.get("name", "Unknown")[:44]
@@ -371,7 +381,7 @@ def export_m3u(tracks: list, mood: str, output_dir: str = "."):
             preview = track.get("preview_url", "")
             f.write(f"#EXTINF:{duration},{artist} - {name}\n")
             f.write(f"# {preview}\n" if preview else f"# No preview available\n")
-    print(colorize(f"  📁  Exported M3U playlist to: {filepath}", "green"))
+    print(colorize(f"    Exported M3U playlist to: {filepath}", "green"))
 
 
 def export_json(tracks: list, mood: str, output_dir: str = "."):
@@ -394,21 +404,21 @@ def export_json(tracks: list, mood: str, output_dir: str = "."):
     }
     with open(filepath, "w") as f:
         json.dump(data, f, indent=2)
-    print(colorize(f"  📁  Exported JSON playlist to: {filepath}", "green"))
+    print(colorize(f"    Exported JSON playlist to: {filepath}", "green"))
 
 
 def save_to_spotify(tracks: list, mood: str, token: str):
     """Get shareable Spotify links for the tracks."""
     playlist_name = f"Mood: {mood.capitalize()}"
-    print(colorize(f"\n  🎵  \"{playlist_name}\" — {len(tracks)} tracks\n", "bold"))
+    print(colorize(f"\n    \"{playlist_name}\" — {len(tracks)} tracks\n", "bold"))
     print("  Add these to your Spotify library:\n")
     for i, track in enumerate(tracks, 1):
         url = track.get("external_urls", {}).get("spotify", "")
         name = track.get("name", "Unknown")
         artist = ", ".join(a["name"] for a in track.get("artists", []))
-        print(f"  {i}. 🎵 {artist} - {name}")
+        print(f"  {i}.  {artist} - {name}")
         if url:
-            print(f"     🔗 {url}")
+            print(f"      {url}")
     print()
 
 
@@ -419,17 +429,17 @@ def interactive_mode(args):
 
     while True:
         try:
-            mood_input = input(colorize("  🎭  How are you feeling? (or 'quit' to exit): ", "cyan")).strip().lower()
+            mood_input = input(colorize("    How are you feeling? (or 'quit' to exit): ", "cyan")).strip().lower()
         except (EOFError, KeyboardInterrupt):
-            print(colorize("\n\n  👋  Goodbye! Stay vibing! 🎶", "cyan"))
+            print(colorize("\n\n    Goodbye! Stay vibing! ", "cyan"))
             break
 
         if mood_input in ("quit", "exit", "q"):
-            print(colorize("\n  👋  Goodbye! Stay vibing! 🎶", "cyan"))
+            print(colorize("\n    Goodbye! Stay vibing! ", "cyan"))
             break
 
         if mood_input not in MOOD_PROFILES:
-            print(colorize(f"  ⚠️  Unknown mood '{mood_input}'. Run with --list to see available moods.\n", "yellow"))
+            print(colorize(f"    Unknown mood '{mood_input}'. Run with --list to see available moods.\n", "yellow"))
             continue
 
         args.mood = mood_input
@@ -446,7 +456,7 @@ def run_playlist_generation(args):
     # Handle surprise mode
     if args.surprise:
         mood = random.choice(list(MOOD_PROFILES.keys()))
-        print(colorize(f"\n  🎲  Surprise! You got... {colorize(mood.upper(), 'magenta')}!", "bold"))
+        print(colorize(f"\n    Surprise! You got... {colorize(mood.upper(), 'magenta')}!", "bold"))
 
     # Handle mood blending
     blended_from = None
@@ -454,24 +464,24 @@ def run_playlist_generation(args):
     if args.blend:
         parts = args.blend.lower().split("+")
         if len(parts) != 2:
-            print(colorize("  ⚠️  Blend format: --blend mood1+mood2 (e.g., --blend chill+romantic)", "yellow"))
+            print(colorize("    Blend format: --blend mood1+mood2 (e.g., --blend chill+romantic)", "yellow"))
             sys.exit(1)
         mood1, mood2 = parts[0].strip(), parts[1].strip()
         if mood1 not in MOOD_PROFILES:
-            print(colorize(f"  ⚠️  Unknown mood '{mood1}'.", "yellow"))
+            print(colorize(f"    Unknown mood '{mood1}'.", "yellow"))
             list_moods()
             sys.exit(1)
         if mood2 not in MOOD_PROFILES:
-            print(colorize(f"  ⚠️  Unknown mood '{mood2}'.", "yellow"))
+            print(colorize(f"    Unknown mood '{mood2}'.", "yellow"))
             list_moods()
             sys.exit(1)
 
         profile = blend_moods(mood1, mood2)
         blended_from = [mood1, mood2]
         mood = f"{mood1}+{mood2}"
-        print(colorize(f"\n  🔮  Blending {mood1} {MOOD_PROFILES[mood1][5]} + {mood2} {MOOD_PROFILES[mood2][5]} = something magical!", "bold"))
+        print(colorize(f"\n    Blending {mood1} {MOOD_PROFILES[mood1][5]} + {mood2} {MOOD_PROFILES[mood2][5]} = something magical!", "bold"))
     elif mood not in MOOD_PROFILES:
-        print(colorize(f"  ⚠️  Unknown mood '{mood}'. Here are available moods:", "yellow"))
+        print(colorize(f"    Unknown mood '{mood}'. Here are available moods:", "yellow"))
         list_moods()
         sys.exit(1)
 
@@ -494,23 +504,23 @@ def run_playlist_generation(args):
     client_secret = args.client_secret or config.get("client_secret") or os.environ.get("SPOTIFY_CLIENT_SECRET", "")
 
     if not client_id or not client_secret:
-        print(colorize("\n  ⚠️  No Spotify credentials provided.", "yellow"))
+        print(colorize("\n    No Spotify credentials provided.", "yellow"))
         print("  You can still use the tool in demo mode with --demo flag,")
         print(f"  or set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.")
         print("  Or save them with: mood-playlist --save-config --client-id ID --client-secret SECRET")
-        print("\n  📝  To get credentials:")
+        print("\n    To get credentials:")
         print("     1. Go to https://developer.spotify.com/dashboard")
         print("     2. Create an app (set redirect URI to http://localhost:8888/callback)")
         print("     3. Copy the Client ID and Client Secret\n")
         sys.exit(1)
 
     # Fetch tracks
-    print(f"  🔍  Searching Spotify for {', '.join(genres[:3])}...")
+    print(f"    Searching Spotify for {', '.join(genres[:3])}...")
     token = get_spotify_token(client_id, client_secret)
     tracks = search_tracks(genres, energy, valence, token, limit=args.limit or 20)
 
     if not tracks:
-        print(colorize("\n  😔  Could not find tracks. Your credentials may be invalid or rate-limited.", "yellow"))
+        print(colorize("\n    Could not find tracks. Your credentials may be invalid or rate-limited.", "yellow"))
         sys.exit(1)
 
     # Display
@@ -544,7 +554,7 @@ def demo_mode(args):
     # Handle surprise
     if args.surprise and not mood:
         mood = random.choice(list(MOOD_PROFILES.keys()))
-        print(colorize(f"\n  🎲  Surprise! You got... {colorize(mood.upper(), 'magenta')}!", "bold"))
+        print(colorize(f"\n    Surprise! You got... {colorize(mood.upper(), 'magenta')}!", "bold"))
 
     # Handle blend
     if args.blend:
@@ -555,11 +565,11 @@ def demo_mode(args):
                 profile = blend_moods(mood1, mood2)
                 blended_from = [mood1, mood2]
                 mood = f"{mood1}+{mood2}"
-                print(colorize(f"\n  🔮  Blending {mood1} {MOOD_PROFILES[mood1][5]} + {mood2} {MOOD_PROFILES[mood2][5]} = something magical!", "bold"))
+                print(colorize(f"\n    Blending {mood1} {MOOD_PROFILES[mood1][5]} + {mood2} {MOOD_PROFILES[mood2][5]} = something magical!", "bold"))
 
     if not mood or mood not in MOOD_PROFILES:
         if not blended_from:
-            print(colorize(f"  ⚠️  Unknown mood '{mood}'. Here are available moods:", "yellow"))
+            print(colorize(f"    Unknown mood '{mood}'. Here are available moods:", "yellow"))
             list_moods()
             sys.exit(1)
 
@@ -576,14 +586,14 @@ def demo_mode(args):
 
     print(colorize(f"\n  {emoji}  DEMO MODE — {mood_name} Playlist", "bold"))
     print(colorize(f"     {desc}\n", "white"))
-    print(f"  📊  Search parameters:")
+    print(f"    Search parameters:")
     print(f"     • Genres:       {', '.join(genres)}")
     print(f"     • Energy:       {energy:.2f}  ({'low' if energy < 0.4 else 'medium' if energy < 0.7 else 'high'})")
     print(f"     • Valence:      {valence:.2f}  ({'negative' if valence < 0.4 else 'neutral' if valence < 0.7 else 'positive'})")
     print(f"     • Danceability: {energy * 0.9:.2f}")
     print(f"     • Limit:        {args.limit or 20} tracks\n")
 
-    print(colorize("  🎵  With a real Spotify account, you'd get tracks like:\n", "bold"))
+    print(colorize("    With a real Spotify account, you'd get tracks like:\n", "bold"))
 
     # Example track names based on mood
     example_tracks = {
@@ -771,16 +781,16 @@ def demo_mode(args):
 
     tracks_for_mood = example_tracks.get(mood, [])
     for i, (name, artist) in enumerate(tracks_for_mood, 1):
-        print(f"  {i}. 🎵 {artist} - {name}")
+        print(f"  {i}.  {artist} - {name}")
 
-    print(colorize(f"\n  💡  Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET for real tracks!", "cyan"))
+    print(colorize(f"\n    Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET for real tracks!", "cyan"))
     print()
 
 
 def main():
     parser = argparse.ArgumentParser(
         prog="mood-playlist",
-        description="🎵 Generate music playlists based on your mood",
+        description=" Generate music playlists based on your mood",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent("""\
             examples:
@@ -846,11 +856,11 @@ def main():
     if not args.mood and not args.surprise and not args.blend:
         print_banner()
         list_moods()
-        print(colorize("  👉  Run: mood-playlist <mood> to generate a playlist", "cyan"))
-        print(colorize("  👉  Run: mood-playlist --interactive for interactive mode", "cyan"))
-        print(colorize("  👉  Run: mood-playlist --surprise for a random mood", "cyan"))
-        print(colorize("  👉  Run: mood-playlist --blend mood1+mood2 to blend moods", "cyan"))
-        print(colorize("  👉  Run: mood-playlist --help for all options\n", "cyan"))
+        print(colorize("    Run: mood-playlist <mood> to generate a playlist", "cyan"))
+        print(colorize("    Run: mood-playlist --interactive for interactive mode", "cyan"))
+        print(colorize("    Run: mood-playlist --surprise for a random mood", "cyan"))
+        print(colorize("    Run: mood-playlist --blend mood1+mood2 to blend moods", "cyan"))
+        print(colorize("    Run: mood-playlist --help for all options\n", "cyan"))
         return
 
     # Demo mode
@@ -858,7 +868,7 @@ def main():
         print_banner()
         if args.surprise and not args.mood:
             args.mood = random.choice(list(MOOD_PROFILES.keys()))
-            print(colorize(f"\n  🎲  Surprise! You got... {colorize(args.mood.upper(), 'magenta')}!", "bold"))
+            print(colorize(f"\n    Surprise! You got... {colorize(args.mood.upper(), 'magenta')}!", "bold"))
         demo_mode(args)
         return
 
